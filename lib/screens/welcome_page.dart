@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'mascota_page.dart';
+import 'mascota_list_page.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
@@ -33,7 +33,7 @@ class WelcomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const MascotaPage()),
+                        builder: (context) => const MascotaListPage()),
                   );
                 },
                 child: const Text("Entrar"),

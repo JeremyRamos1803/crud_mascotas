@@ -4,6 +4,7 @@ class Mascota {
   final String especie;
   final int edad;
   final String dueno;
+  final String? imagen; // ruta de la imagen
 
   Mascota({
     this.id,
@@ -11,6 +12,7 @@ class Mascota {
     required this.especie,
     required this.edad,
     required this.dueno,
+    this.imagen,
   });
 
   factory Mascota.fromMap(Map<String, dynamic> map) {
@@ -22,6 +24,7 @@ class Mascota {
           ? map['edad'] as int
           : int.tryParse(map['edad']?.toString() ?? '0') ?? 0,
       dueno: map['dueno'] as String? ?? '',
+      imagen: map['imagen'],
     );
   }
 
@@ -32,6 +35,7 @@ class Mascota {
       'especie': especie,
       'edad': edad,
       'dueno': dueno,
+      'imagen': imagen,
     };
   }
 }
