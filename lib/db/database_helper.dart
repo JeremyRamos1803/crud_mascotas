@@ -22,7 +22,6 @@ class DatabaseHelper {
       path,
       version: 2,
       onCreate: _createDB,
-      onUpgrade: _upgradeDB,
     );
   }
 
@@ -37,12 +36,6 @@ class DatabaseHelper {
         imagen TEXT
       )
     ''');
-  }
-
-  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE mascotas ADD COLUMN imagen TEXT');
-    }
   }
 
   Future<int> insertMascota(Mascota mascota) async {

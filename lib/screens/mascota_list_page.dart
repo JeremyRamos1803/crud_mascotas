@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../db/database_helper.dart';
 import '../models/mascota.dart';
 import 'mascota_page.dart';
+import 'mascota_detail_page.dart';
 
 class MascotaListPage extends StatefulWidget {
   const MascotaListPage({super.key});
@@ -41,6 +42,14 @@ class _MascotaListPageState extends State<MascotaListPage> {
     if (result == true) _loadMascotas();
   }
 
+  void _navigateToDetail(Mascota mascota) async{
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => MascotaDetailPage(mascota: mascota)),
+    );
+    if (result == true) _loadMascotas();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,10 +80,19 @@ class _MascotaListPageState extends State<MascotaListPage> {
                 final mascota = _mascotas[index];
                 return ListTile(
                   leading: mascota.imagen != null
-                      ? Image.file(File(mascota.imagen!), width: 50, height: 50, fit: BoxFit.cover)
-                      : const Icon(Icons.pets),
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(mascota.imagen!),
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover, // ✅ recorta para que quede cuadrado
+                          ),
+                        )
+                      : const Icon(Icons.pets, size: 40),
                   title: Text(mascota.nombre),
                   subtitle: Text('${mascota.especie}, ${mascota.edad} años'),
+                  onTap: () => _navigateToDetail(mascota), // ✅ ver detalle
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
