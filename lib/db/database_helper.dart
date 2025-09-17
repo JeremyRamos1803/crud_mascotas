@@ -1,6 +1,5 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'dart:async';
 import '../models/mascota.dart';
 
 class DatabaseHelper {
@@ -21,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
     );
   }
@@ -33,25 +32,30 @@ class DatabaseHelper {
         nombre TEXT NOT NULL,
         especie TEXT NOT NULL,
         edad INTEGER NOT NULL,
-        dueno TEXT NOT NULL
+        dueño TEXT NOT NULL,
+        imagen TEXT
       )
     ''');
   }
 
-  // Insertar
   Future<int> insertMascota(Mascota mascota) async {
     final db = await instance.database;
     return await db.insert('mascotas', mascota.toMap());
   }
 
-  // Obtener todas
-  Future<List<Mascota>> getMascotas() async {
+  Future<List<Mascota>> getMascotas({String? filtro}) async {
     final db = await instance.database;
-    final result = await db.query('mascotas');
-    return result.map((e) => Mascota.fromMap(e)).toList();
+    final result = filtro == null || filtro.isEmpty
+        ? await db.query('mascotas')
+        : await db.query(
+            'mascotas',
+            where: 'nombre LIKE ?',
+            whereArgs: ['%$filtro%'],
+          );
+
+    return result.map((map) => Mascota.fromMap(map)).toList();
   }
 
-  // Actualizar
   Future<int> updateMascota(Mascota mascota) async {
     final db = await instance.database;
     return await db.update(
@@ -62,7 +66,6 @@ class DatabaseHelper {
     );
   }
 
-  // Eliminar
   Future<int> deleteMascota(int id) async {
     final db = await instance.database;
     return await db.delete(

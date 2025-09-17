@@ -1,149 +1,137 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../db/database_helper.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/mascota.dart';
+import '../db/database_helper.dart';
 
 class MascotaPage extends StatefulWidget {
-  const MascotaPage({super.key});
+  final Mascota? mascota;
+
+  const MascotaPage({super.key, this.mascota});
 
   @override
   State<MascotaPage> createState() => _MascotaPageState();
 }
 
 class _MascotaPageState extends State<MascotaPage> {
-  late Future<List<Mascota>> mascotas;
-  String filtro = '';
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nombreController;
+  late TextEditingController _especieController;
+  late TextEditingController _edadController;
+  late TextEditingController _duenoController;
+  String? _imagenPath;
 
   @override
   void initState() {
     super.initState();
-    refreshMascotas();
+    _nombreController = TextEditingController(text: widget.mascota?.nombre ?? '');
+    _especieController = TextEditingController(text: widget.mascota?.especie ?? '');
+    _edadController = TextEditingController(text: widget.mascota?.edad.toString() ?? '');
+    _duenoController = TextEditingController(text: widget.mascota?.dueno ?? '');
+    _imagenPath = widget.mascota?.imagen;
   }
 
-  void refreshMascotas() {
-    setState(() {
-      mascotas = DatabaseHelper.instance.getMascotas();
-    });
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _especieController.dispose();
+    _edadController.dispose();
+    _duenoController.dispose();
+    super.dispose();
   }
 
-  void showForm({Mascota? mascota}) {
-    final nombreCtrl = TextEditingController(text: mascota?.nombre ?? '');
-    final especieCtrl = TextEditingController(text: mascota?.especie ?? '');
-    final edadCtrl = TextEditingController(text: mascota?.edad.toString() ?? '');
-    final duenoCtrl = TextEditingController(text: mascota?.dueno ?? '');
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(mascota == null ? "Nueva Mascota" : "Editar Mascota"),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: "Nombre")),
-              TextField(controller: especieCtrl, decoration: const InputDecoration(labelText: "Especie")),
-              TextField(controller: edadCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Edad")),
-              TextField(controller: duenoCtrl, decoration: const InputDecoration(labelText: "Dueño")),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancelar")),
-          ElevatedButton(
-            onPressed: () async {
-              if (nombreCtrl.text.isEmpty || especieCtrl.text.isEmpty || edadCtrl.text.isEmpty || duenoCtrl.text.isEmpty) return;
-
-              final mascotaNueva = Mascota(
-                id: mascota?.id,
-                nombre: nombreCtrl.text,
-                especie: especieCtrl.text,
-                edad: int.tryParse(edadCtrl.text) ?? 0,
-                dueno: duenoCtrl.text,
-              );
-
-              if (mascota == null) {
-                await DatabaseHelper.instance.insertMascota(mascotaNueva);
-              } else {
-                await DatabaseHelper.instance.updateMascota(mascotaNueva);
-              }
-
-              if (!mounted) return;
-              refreshMascotas();
-              Navigator.pop(context);
-            },
-            child: const Text("Guardar"),
-          )
-        ],
-      ),
-    );
+  /// Capitaliza la primera letra
+  String _capitalizar(String valor) {
+    if (valor.isEmpty) return valor;
+    return valor[0].toUpperCase() + valor.substring(1);
   }
 
-  List<Mascota> filtrar(List<Mascota> lista) {
-    if (filtro.isEmpty) return lista;
-    return lista.where((m) => m.nombre.toLowerCase().contains(filtro.toLowerCase())).toList();
+  /// Seleccionar imagen de la galería
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        _imagenPath = image.path;
+      });
+    }
+  }
+
+  /// Guardar mascota
+  Future<void> _guardarMascota() async {
+    if (_formKey.currentState!.validate()) {
+      final mascota = Mascota(
+        id: widget.mascota?.id,
+        nombre: _capitalizar(_nombreController.text.trim()),
+        especie: _capitalizar(_especieController.text.trim()),
+        edad: int.parse(_edadController.text.trim()),
+        dueno: _capitalizar(_duenoController.text.trim()),
+        imagen: _imagenPath,
+      );
+
+      if (widget.mascota == null) {
+        await DatabaseHelper.instance.insertMascota(mascota);
+      } else {
+        await DatabaseHelper.instance.updateMascota(mascota);
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Mascotas Registradas"),
+        title: Text(widget.mascota == null ? 'Agregar Mascota' : 'Editar Mascota'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: const InputDecoration(
-                labelText: "Buscar por nombre",
-                prefixIcon: Icon(Icons.search),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _nombreController,
+                decoration: const InputDecoration(labelText: 'Nombre'),
+                validator: (value) => value == null || value.isEmpty ? 'Ingrese un nombre' : null,
               ),
-              onChanged: (value) {
-                setState(() {
-                  filtro = value;
-                });
-              },
-            ),
+              TextFormField(
+                controller: _especieController,
+                decoration: const InputDecoration(labelText: 'Especie'),
+                validator: (value) => value == null || value.isEmpty ? 'Ingrese la especie' : null,
+              ),
+              TextFormField(
+                controller: _edadController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Edad'),
+                validator: (value) => value == null || value.isEmpty ? 'Ingrese la edad' : null,
+              ),
+              TextFormField(
+                controller: _duenoController,
+                decoration: const InputDecoration(labelText: 'Dueño'),
+                validator: (value) => value == null || value.isEmpty ? 'Ingrese el dueño' : null,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _pickImage,
+                child: const Text("Seleccionar Imagen"),
+              ),
+              if (_imagenPath != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Image.file(File(_imagenPath!), height: 100),
+                ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _guardarMascota,
+                child: const Text('Guardar'),
+              ),
+            ],
           ),
-          Expanded(
-            child: FutureBuilder<List<Mascota>>(
-              future: mascotas,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                final listaFiltrada = filtrar(snapshot.data!);
-                if (listaFiltrada.isEmpty) return const Center(child: Text("No hay mascotas"));
-
-                return ListView(
-                  children: listaFiltrada.map((m) {
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      child: ListTile(
-                        title: Text("${m.nombre} (${m.especie})"),
-                        subtitle: Text("Edad: ${m.edad} años - Dueño: ${m.dueno}"),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(icon: const Icon(Icons.edit), onPressed: () => showForm(mascota: m)),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () async {
-                                await DatabaseHelper.instance.deleteMascota(m.id!);
-                                if (!mounted) return;
-                                refreshMascotas();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showForm(),
-        child: const Icon(Icons.add),
+        ),
       ),
     );
   }
